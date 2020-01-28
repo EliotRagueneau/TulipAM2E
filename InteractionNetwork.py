@@ -34,7 +34,7 @@ class InteractionNetwork(tlp.ImportModule):
             id1, id2 = line.ID_locus1, line.ID_locus2
             for id in (id1, id2):
                 if id not in self.nodes:
-                    self.nodes[id] = self.graph.addNode()
+                    self.nodes[id] = self.graph.addNode({'viewLabel': id})
             self.graph.addEdge(self.nodes[id1], self.nodes[id2], {'distance': line.distance,
                                                                   'interaction_status': line.interaction_status})
 
@@ -45,7 +45,7 @@ class InteractionNetwork(tlp.ImportModule):
             try:
                 expression[self.nodes[line.IDs]] = str(line.expression)
             except KeyError:
-                node = self.graph.addNode()
+                node = self.graph.addNode({'viewLabel': line.IDs})
                 self.nodes[line.IDs] = node
                 expression[node] = str(line.expression)
 
@@ -62,13 +62,28 @@ class InteractionNetwork(tlp.ImportModule):
                     try:
                         nodes_of_pathway.append(self.nodes[locus])
                     except KeyError:
-                        node = self.graph.addNode()
+                        node = self.graph.addNode({'viewLabel': locus})
                         self.nodes[locus] = node
                         nodes_of_pathway.append(node)
 
                 self.graph.inducedSubGraph(nodes_of_pathway, self.graph, name)
 
     def style_graph(self):
+        self.apply_layout()
+        self.color_nodes()
+        self.color_edges()
+
+    def apply_layout(self):
+        distance = self.graph.getDoubleProperty('distance')
+        viewLayout = self.graph.getLayoutProperty('viewLayout')
+        layout_properties = tlp.getDefaultPluginParameters('FM^3 (OGDF)', graph=None)
+        layout_properties['Edge Length Property'] = distance
+        self.graph.applyLayoutAlgorithm('FM^3 (OGDF)', viewLayout, layout_properties)
+
+    def color_nodes(self):
+        pass
+
+    def color_edges(self):
         pass
 
 
