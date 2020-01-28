@@ -20,73 +20,75 @@ class InteractionNetwork(tlp.ImportModule):
                               isMandatory=True, mustExist=True)
 
     def importGraph(self):
-        self.init_properties()
-        self.import_interactions()
-        self.import_gene_expression()
-        self.style_graph()
-        self.import_pathways()
+        self.initProperties()
+        self.importInteractions()
+        self.importGeneExpression()
+        self.styleGraph()
+        self.importPathways()
         return True
 
-    def init_properties(self):
-        self.nodes = {}
+    def initProperties(self):
+        self.idToNode = {}
+        self.chromosome = self.graph.getStringProperty("chromosome")
         self.expression = self.graph.getStringProperty("expression")
+        self.interactionStatus = self.graph.getStringProperty("interactionStatus")
         self.distance = self.graph.getDoubleProperty('distance')
-        self.view_layout = self.graph.getLayoutProperty('viewLayout')
-        self.view_color = self.graph.getColorProperty('viewColor')
+        self.viewLayout = self.graph.getLayoutProperty('viewLayout')
+        self.viewColor = self.graph.getColorProperty('viewColor')
 
-    def import_interactions(self):
-        data_frame = read_csv(self.dataSet['Path to interaction csv'], sep='\t')
-        for line in data_frame.itertuples():
-            id1, id2 = line.ID_locus1, line.ID_locus2
+    def importInteractions(self):
+        dataFrame = read_csv(self.dataSet['Path to interaction csv'], sep='\t')
+        for row in dataFrame.itertuples():
+            id1, id2 = row.ID_locus1, row.ID_locus2
             for id in (id1, id2):
-                if id not in self.nodes:
-                    self.nodes[id] = self.graph.addNode({'viewLabel': id})
-            self.graph.addEdge(self.nodes[id1], self.nodes[id2], {'distance': line.distance,
-                                                                  'interaction_status': line.interaction_status})
+                if id not in self.idToNode:
+                    self.idToNode[id] = self.graph.addNode({'viewLabel': id, 'chromosome': row.chromosome})
+            self.graph.addEdge(self.idToNode[id1], self.idToNode[id2], {'distance': row.distance,
+                                                                        'interactionStatus': row.interaction_status})
 
-    def import_gene_expression(self):
-        data_frame = read_csv(self.dataSet['Path to expression csv'], sep='\t')
-        for line in data_frame.itertuples():
+    def importGeneExpression(self):
+        dataFrame = read_csv(self.dataSet['Path to expression csv'], sep='\t')
+        for row in dataFrame.itertuples():
             try:
-                self.expression[self.nodes[line.IDs]] = str(line.expression)
+                self.expression[self.idToNode[row.IDs]] = str(row.expression)
             except KeyError:
-                node = self.graph.addNode({'viewLabel': line.IDs})
-                self.nodes[line.IDs] = node
-                self.expression[node] = str(line.expression)
+                node = self.graph.addNode({'viewLabel': row.IDs, 'chromosome': row.chromosome})
+                self.idToNode[row.IDs] = node
+                self.expression[node] = str(row.expression)
 
-    def import_pathways(self):
-        self.import_pathways_from_csv(self.dataSet['Path to Reactome Symbols csv'])
-        self.import_pathways_from_csv(self.dataSet['Path to KEGG Symbols csv'])
+    def importPathways(self):
+        self.importPathwaysFromCSV(self.dataSet['Path to Reactome Symbols csv'])
+        self.importPathwaysFromCSV(self.dataSet['Path to KEGG Symbols csv'])
 
-    def import_pathways_from_csv(self, csv_path):
-        with open(csv_path, 'r') as csv:
+    def importPathwaysFromCSV(self, csvPath):
+        with open(csvPath, 'r') as csv:
             for line in csv:
                 name, url, *loci = line.strip().split('\t')
-                nodes_of_pathway = []
+                nodesOfPathway = []
                 for locus in loci:
                     try:
-                        nodes_of_pathway.append(self.nodes[locus])
+                        nodesOfPathway.append(self.idToNode[locus])
                     except KeyError:
                         node = self.graph.addNode({'viewLabel': locus})
-                        self.nodes[locus] = node
-                        nodes_of_pathway.append(node)
+                        self.idToNode[locus] = node
+                        nodesOfPathway.append(node)
 
-                self.graph.inducedSubGraph(nodes_of_pathway, self.graph, name)
+                self.graph.inducedSubGraph(nodesOfPathway, self.graph, name)
 
-    def style_graph(self):
-        self.apply_layout()
-        self.color_nodes()
-        self.color_edges()
+    def styleGraph(self):
+        self.applyLayout()
+        self.colorNodes()
+        self.colorEdges()
 
-    def apply_layout(self):
-        layout_properties = tlp.getDefaultPluginParameters('FM^3 (OGDF)', graph=None)
-        layout_properties['Edge Length Property'] = self.distance
-        self.graph.applyLayoutAlgorithm('FM^3 (OGDF)', self.view_layout, layout_properties)
+    def applyLayout(self):
+        fm3Properties = tlp.getDefaultPluginParameters('FM^3 (OGDF)', graph=None)
+        fm3Properties['Edge Length Property'] = self.distance
+        self.graph.applyLayoutAlgorithm('FM^3 (OGDF)', self.viewLayout, fm3Properties)
 
-    def color_nodes(self):
+    def colorNodes(self):
         pass
 
-    def color_edges(self):
+    def colorEdges(self):
         pass
 
 
