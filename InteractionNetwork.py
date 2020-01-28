@@ -1,8 +1,3 @@
-# When the plugin development is finished, you can copy the associated Python file 
-# to /home/eliot/.Tulip-5.3/plugins/python
-# or /usr/local/lib/tulip/python/
-# and it will be automatically loaded at Tulip startup
-
 import tulipplugins
 from pandas import read_csv
 from tulip import tlp
@@ -17,10 +12,18 @@ class InteractionNetwork(tlp.ImportModule):
         self.addFileParameter("Path to expression csv", help="",
                               defaultValue="/home/eliot/Documents/Travail/M2/DEA/Tulip/ProjetM2/chromosome6_fragments_expressions.csv",
                               isMandatory=True, mustExist=True)
+        self.addFileParameter("Path to Reactome Symbols csv", help="",
+                              defaultValue="/home/eliot/Documents/Travail/M2/DEA/Tulip/ProjetM2/chromosome6_fragments_expressions.csv",
+                              isMandatory=True, mustExist=True)
+        self.addFileParameter("Path to KEGG Symbols csv", help="",
+                              defaultValue="/home/eliot/Documents/Travail/M2/DEA/Tulip/ProjetM2/chromosome6_fragments_expressions.csv",
+                              isMandatory=True, mustExist=True)
 
     def importGraph(self):
         self.import_interactions()
         self.import_gene_expression()
+        self.import_pathways()
+        self.stylized_graph()
 
         return True
 
@@ -40,8 +43,22 @@ class InteractionNetwork(tlp.ImportModule):
         expression = self.graph.getStringProperty("expression")
         for line in data_frame.itertuples():
             if line.IDs not in self.nodes:
-                self.nodes[line.IDs] = self.graph.addNode()
-            expression[self.nodes[line.IDs]] = str(line.expression)
+                node = self.graph.addNode()
+                self.nodes[line.IDs] = node
+                expression[node] = str(line.expression)
+            else:
+                expression[self.nodes[line.IDs]] = str(line.expression)
+
+    def import_pathways(self):
+        self.import_pathways_from_csv(self.dataSet['Path to Reactome Symbols csv'])
+        self.import_pathways_from_csv(self.dataSet['Path to KEGG Symbols csv'])
+
+    def import_pathways_from_csv(self, csv_path):
+        pass
+
+    def stylized_graph(self):
+        pass
+
 
 # The line below does the magic to register the plugin into the plugin database
 # and updates the GUI to make it accessible through the menus.
