@@ -13,17 +13,17 @@ class InteractionNetwork(tlp.ImportModule):
                               defaultValue="/home/eliot/Documents/Travail/M2/DEA/Tulip/ProjetM2/chromosome6_fragments_expressions.csv",
                               isMandatory=True, mustExist=True)
         self.addFileParameter("Path to Reactome Symbols csv", help="",
-                              defaultValue="/home/eliot/Documents/Travail/M2/DEA/Tulip/ProjetM2/chromosome6_fragments_expressions.csv",
+                              defaultValue="/home/eliot/Documents/Travail/M2/DEA/Tulip/ProjetM2/REACTOME.symbols.csv",
                               isMandatory=True, mustExist=True)
         self.addFileParameter("Path to KEGG Symbols csv", help="",
-                              defaultValue="/home/eliot/Documents/Travail/M2/DEA/Tulip/ProjetM2/chromosome6_fragments_expressions.csv",
+                              defaultValue="/home/eliot/Documents/Travail/M2/DEA/Tulip/ProjetM2/KEGG.symbols.csv",
                               isMandatory=True, mustExist=True)
 
     def importGraph(self):
         self.import_interactions()
         self.import_gene_expression()
-        self.import_pathways()
         self.style_graph()
+        self.import_pathways()
 
         return True
 
@@ -42,19 +42,31 @@ class InteractionNetwork(tlp.ImportModule):
         data_frame = read_csv(self.dataSet['Path to expression csv'], sep='\t')
         expression = self.graph.getStringProperty("expression")
         for line in data_frame.itertuples():
-            if line.IDs not in self.nodes:
+            try:
+                expression[self.nodes[line.IDs]] = str(line.expression)
+            except KeyError:
                 node = self.graph.addNode()
                 self.nodes[line.IDs] = node
                 expression[node] = str(line.expression)
-            else:
-                expression[self.nodes[line.IDs]] = str(line.expression)
 
     def import_pathways(self):
         self.import_pathways_from_csv(self.dataSet['Path to Reactome Symbols csv'])
         self.import_pathways_from_csv(self.dataSet['Path to KEGG Symbols csv'])
 
     def import_pathways_from_csv(self, csv_path):
-        pass
+        with open(csv_path, 'r') as csv:
+            for line in csv:
+                name, url, *loci = line.strip().split('\t')
+                nodes_of_pathway = []
+                for locus in loci:
+                    try:
+                        nodes_of_pathway.append(self.nodes[locus])
+                    except KeyError:
+                        node = self.graph.addNode()
+                        self.nodes[locus] = node
+                        nodes_of_pathway.append(node)
+
+                self.graph.inducedSubGraph(nodes_of_pathway, self.graph, name)
 
     def style_graph(self):
         pass
