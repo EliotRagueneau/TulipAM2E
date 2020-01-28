@@ -23,7 +23,7 @@ class InteractionNetwork(tlp.ImportModule):
         self.import_interactions()
         self.import_gene_expression()
         self.import_pathways()
-        self.stylize_graph()
+        self.style_graph()
 
         return True
 
@@ -56,7 +56,7 @@ class InteractionNetwork(tlp.ImportModule):
     def import_pathways_from_csv(self, csv_path):
         pass
 
-    def stylize_graph(self):
+    def style_graph(self):
         pass
 
 
