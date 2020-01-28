@@ -22,9 +22,13 @@ class InteractionNetwork(tlp.ImportModule):
     def importGraph(self):
         self.initProperties()
         self.importInteractions()
+        self.pluginProgress.progress(1, 4)
         self.importGeneExpression()
-        self.styleGraph()
+        self.pluginProgress.progress(2, 4)
         self.importPathways()
+        print(self.graph.numberOfSubGraphs())
+        self.pluginProgress.progress(3, 4)
+        self.styleGraph()
         return True
 
     def initProperties(self):
@@ -35,26 +39,31 @@ class InteractionNetwork(tlp.ImportModule):
         self.distance = self.graph.getDoubleProperty('distance')
         self.viewLayout = self.graph.getLayoutProperty('viewLayout')
         self.viewColor = self.graph.getColorProperty('viewColor')
+        self.viewSize = self.graph.getSizeProperty('viewSize')
 
     def importInteractions(self):
         dataFrame = read_csv(self.dataSet['Path to interaction csv'], sep='\t')
         for row in dataFrame.itertuples():
             id1, id2 = row.ID_locus1, row.ID_locus2
-            for id in (id1, id2):
-                if id not in self.idToNode:
-                    self.idToNode[id] = self.graph.addNode({'viewLabel': id, 'chromosome': row.chromosome})
-            self.graph.addEdge(self.idToNode[id1], self.idToNode[id2], {'distance': row.distance,
-                                                                        'interactionStatus': row.interaction_status})
+            if str(row.interaction_status) in ('gain', 'loss'):
+                for id in (id1, id2):
+                    if id not in self.idToNode:
+                        self.idToNode[id] = self.graph.addNode({'viewLabel': id, 'chromosome': row.chromosome})
+                self.graph.addEdge(self.idToNode[id1], self.idToNode[id2], {'distance': row.distance,
+                                                                            'interactionStatus': str(
+                                                                                row.interaction_status),
+                                                                            'chromosome': row.chromosome})
 
     def importGeneExpression(self):
         dataFrame = read_csv(self.dataSet['Path to expression csv'], sep='\t')
         for row in dataFrame.itertuples():
-            try:
-                self.expression[self.idToNode[row.IDs]] = str(row.expression)
-            except KeyError:
-                node = self.graph.addNode({'viewLabel': row.IDs, 'chromosome': row.chromosome})
-                self.idToNode[row.IDs] = node
-                self.expression[node] = str(row.expression)
+            if str(row.expression) in ('up', 'down'):
+                try:
+                    self.expression[self.idToNode[row.IDs]] = str(row.expression)
+                except KeyError:
+                    node = self.graph.addNode({'viewLabel': row.IDs, 'chromosome': row.chromosome})
+                    self.idToNode[row.IDs] = node
+                    self.expression[node] = str(row.expression)
 
     def importPathways(self):
         self.importPathwaysFromCSV(self.dataSet['Path to Reactome Symbols csv'])
@@ -65,33 +74,54 @@ class InteractionNetwork(tlp.ImportModule):
             for line in csv:
                 name, url, *loci = line.strip().split('\t')
                 nodesOfPathway = []
+                lociNotInGraph = []
                 for locus in loci:
                     try:
                         nodesOfPathway.append(self.idToNode[locus])
                     except KeyError:
-                        node = self.graph.addNode({'viewLabel': locus})
-                        self.idToNode[locus] = node
-                        nodesOfPathway.append(node)
+                        lociNotInGraph.append(locus)
 
-                self.graph.inducedSubGraph(nodesOfPathway, self.graph, name)
+                if len(nodesOfPathway) > 0:
+                    for locusNotInGraph in lociNotInGraph:
+                        node = self.graph.addNode({'viewLabel': locusNotInGraph})
+                        self.idToNode[locusNotInGraph] = node
+                        nodesOfPathway.append(node)
+                    self.graph.inducedSubGraph(nodesOfPathway, self.graph, name)
 
     def styleGraph(self):
         self.applyLayout()
-        self.colorNodes()
-        self.colorEdges()
+        self.colorLoci()
+        self.colorInteractions()
+        self.setLociSize()
 
     def applyLayout(self):
         fm3Properties = tlp.getDefaultPluginParameters('FM^3 (OGDF)', graph=None)
         fm3Properties['Edge Length Property'] = self.distance
         self.graph.applyLayoutAlgorithm('FM^3 (OGDF)', self.viewLayout, fm3Properties)
 
-    def colorNodes(self):
-        pass
+    def colorLoci(self):
+        self.colorLociByExpression('intergenic', tlp.Color(204, 255, 255))
+        self.colorLociByExpression('up', tlp.Color(0, 255, 0))
+        self.colorLociByExpression('down', tlp.Color(255, 0, 0))
+        self.colorLociByExpression('stable', tlp.Color(0, 0, 0))
+        self.colorLociByExpression('', tlp.Color(0, 0, 0))
+        self.colorLociByExpression('nan', tlp.Color(255, 230, 255))
 
-    def colorEdges(self):
-        pass
+    def colorLociByExpression(self, expression, color):
+        for loci in self.expression.getNodesEqualTo(expression):
+            self.viewColor[loci] = color
+
+    def colorInteractions(self):
+        self.colorInteractionsByStatus('gain', tlp.Color(0, 255, 0))
+        self.colorInteractionsByStatus('stable', tlp.Color(0, 0, 0))
+        self.colorInteractionsByStatus('loss', tlp.Color(255, 0, 0))
+
+    def colorInteractionsByStatus(self, interactionStatus, color):
+        for interaction in self.interactionStatus.getEdgesEqualTo(interactionStatus):
+            self.viewColor[interaction] = color
+
+    def setLociSize(self):
+        self.viewSize.setAllNodeValue(tlp.Vec3f(1e5, 1e5, 0.5))
 
 
-# The line below does the magic to register the plugin into the plugin database
-# and updates the GUI to make it accessible through the menus.
 tulipplugins.registerPlugin("InteractionNetwork", "Interaction Network", "AM2E", "28/01/2020", "", "1.0")
