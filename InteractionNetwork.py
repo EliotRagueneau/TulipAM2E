@@ -26,7 +26,6 @@ class InteractionNetwork(tlp.ImportModule):
         self.importGeneExpression()
         self.pluginProgress.progress(2, 4)
         self.importPathways()
-        print(self.graph.numberOfSubGraphs())
         self.pluginProgress.progress(3, 4)
         self.styleGraph()
         return True
@@ -45,25 +44,23 @@ class InteractionNetwork(tlp.ImportModule):
         dataFrame = read_csv(self.dataSet['Path to interaction csv'], sep='\t')
         for row in dataFrame.itertuples():
             id1, id2 = row.ID_locus1, row.ID_locus2
-            if str(row.interaction_status) in ('gain', 'loss'):
-                for id in (id1, id2):
-                    if id not in self.idToNode:
-                        self.idToNode[id] = self.graph.addNode({'viewLabel': id, 'chromosome': row.chromosome})
-                self.graph.addEdge(self.idToNode[id1], self.idToNode[id2], {'distance': row.distance,
-                                                                            'interactionStatus': str(
-                                                                                row.interaction_status),
-                                                                            'chromosome': row.chromosome})
+            for id in (id1, id2):
+                if id not in self.idToNode:
+                    self.idToNode[id] = self.graph.addNode({'viewLabel': id, 'chromosome': row.chromosome})
+            self.graph.addEdge(self.idToNode[id1], self.idToNode[id2], {'distance': row.distance,
+                                                                        'interactionStatus': str(
+                                                                            row.interaction_status),
+                                                                        'chromosome': row.chromosome})
 
     def importGeneExpression(self):
         dataFrame = read_csv(self.dataSet['Path to expression csv'], sep='\t')
         for row in dataFrame.itertuples():
-            if str(row.expression) in ('up', 'down'):
-                try:
-                    self.expression[self.idToNode[row.IDs]] = str(row.expression)
-                except KeyError:
-                    node = self.graph.addNode({'viewLabel': row.IDs, 'chromosome': row.chromosome})
-                    self.idToNode[row.IDs] = node
-                    self.expression[node] = str(row.expression)
+            try:
+                self.expression[self.idToNode[row.IDs]] = str(row.expression)
+            except KeyError:
+                node = self.graph.addNode({'viewLabel': row.IDs, 'chromosome': row.chromosome})
+                self.idToNode[row.IDs] = node
+                self.expression[node] = str(row.expression)
 
     def importPathways(self):
         self.importPathwaysFromCSV(self.dataSet['Path to Reactome Symbols csv'])
@@ -74,19 +71,15 @@ class InteractionNetwork(tlp.ImportModule):
             for line in csv:
                 name, url, *loci = line.strip().split('\t')
                 nodesOfPathway = []
-                lociNotInGraph = []
                 for locus in loci:
                     try:
                         nodesOfPathway.append(self.idToNode[locus])
                     except KeyError:
-                        lociNotInGraph.append(locus)
-
-                if len(nodesOfPathway) > 0:
-                    for locusNotInGraph in lociNotInGraph:
-                        node = self.graph.addNode({'viewLabel': locusNotInGraph})
-                        self.idToNode[locusNotInGraph] = node
+                        node = self.graph.addNode({'viewLabel': locus})
+                        self.idToNode[locus] = node
                         nodesOfPathway.append(node)
-                    self.graph.inducedSubGraph(nodesOfPathway, self.graph, name)
+
+                self.graph.inducedSubGraph(nodesOfPathway, self.graph, name)
 
     def styleGraph(self):
         self.applyLayout()
