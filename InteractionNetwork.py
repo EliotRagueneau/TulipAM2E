@@ -20,16 +20,22 @@ class InteractionNetwork(tlp.ImportModule):
                               isMandatory=True, mustExist=True)
 
     def importGraph(self):
+        self.init_properties()
         self.import_interactions()
         self.import_gene_expression()
         self.style_graph()
         self.import_pathways()
-
         return True
+
+    def init_properties(self):
+        self.nodes = {}
+        self.expression = self.graph.getStringProperty("expression")
+        self.distance = self.graph.getDoubleProperty('distance')
+        self.view_layout = self.graph.getLayoutProperty('viewLayout')
+        self.view_color = self.graph.getColorProperty('viewColor')
 
     def import_interactions(self):
         data_frame = read_csv(self.dataSet['Path to interaction csv'], sep='\t')
-        self.nodes = {}
         for line in data_frame.itertuples():
             id1, id2 = line.ID_locus1, line.ID_locus2
             for id in (id1, id2):
@@ -40,14 +46,13 @@ class InteractionNetwork(tlp.ImportModule):
 
     def import_gene_expression(self):
         data_frame = read_csv(self.dataSet['Path to expression csv'], sep='\t')
-        expression = self.graph.getStringProperty("expression")
         for line in data_frame.itertuples():
             try:
-                expression[self.nodes[line.IDs]] = str(line.expression)
+                self.expression[self.nodes[line.IDs]] = str(line.expression)
             except KeyError:
                 node = self.graph.addNode({'viewLabel': line.IDs})
                 self.nodes[line.IDs] = node
-                expression[node] = str(line.expression)
+                self.expression[node] = str(line.expression)
 
     def import_pathways(self):
         self.import_pathways_from_csv(self.dataSet['Path to Reactome Symbols csv'])
@@ -74,11 +79,9 @@ class InteractionNetwork(tlp.ImportModule):
         self.color_edges()
 
     def apply_layout(self):
-        distance = self.graph.getDoubleProperty('distance')
-        viewLayout = self.graph.getLayoutProperty('viewLayout')
         layout_properties = tlp.getDefaultPluginParameters('FM^3 (OGDF)', graph=None)
-        layout_properties['Edge Length Property'] = distance
-        self.graph.applyLayoutAlgorithm('FM^3 (OGDF)', viewLayout, layout_properties)
+        layout_properties['Edge Length Property'] = self.distance
+        self.graph.applyLayoutAlgorithm('FM^3 (OGDF)', self.view_layout, layout_properties)
 
     def color_nodes(self):
         pass
