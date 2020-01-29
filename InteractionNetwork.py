@@ -21,7 +21,6 @@ class InteractionNetwork(tlp.ImportModule):
                               isMandatory=True, mustExist=True)
 
     def importGraph(self):
-        self.pluginProgress.progress(0, 4)
         self.initProperties()
         self.importInteractions()
         self.pluginProgress.progress(1, 4)
@@ -47,14 +46,15 @@ class InteractionNetwork(tlp.ImportModule):
         dataFrame = read_csv(self.dataSet['Path to interaction csv'], sep='\t')
         for row in dataFrame.itertuples():
             chromosome = row.chromosome
+            distance = int(row.distance)
             id1, id2 = row.ID_locus1, row.ID_locus2
             for id in (id1, id2):
                 if id not in self.idToNode:
                     self.idToNode[id] = self.graph.addNode(
                         {'viewLabel': id, 'chromosome': chromosome})
-            self.graph.addEdge(self.idToNode[id1], self.idToNode[id2], {'distance': int(row.distance),
+            self.graph.addEdge(self.idToNode[id1], self.idToNode[id2], {'distance': distance,
                                                                         'interactionStatus': str(row.interaction_status),
-                                                                         'chromosome': chromosome})
+                                                                        'chromosome': str(chromosome)})
 
     def importGeneExpression(self):
         dataFrame = read_csv(self.dataSet['Path to expression csv'], sep='\t')
