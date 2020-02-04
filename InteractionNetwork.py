@@ -1,23 +1,22 @@
 import tulipplugins
 from pandas import read_csv
 from tulip import tlp
-import numpy as np
 
 
 class InteractionNetwork(tlp.ImportModule):
     def __init__(self, context):
         tlp.ImportModule.__init__(self, context)
         self.addFileParameter("Path to interaction csv", help="",
-                              defaultValue="/net/cremi/edarnige/espaces/travail/TulipAM2E/interactions_chromosome6.csv",
+                              defaultValue="/home/eliot/Documents/Travail/M2/DEA/Tulip/ProjetM2/interactions_chromosome6.csv",
                               isMandatory=True, mustExist=True)
         self.addFileParameter("Path to expression csv", help="",
-                              defaultValue="/net/cremi/edarnige/espaces/travail/TulipAM2E/chromosome6_fragments_expressions.csv",
+                              defaultValue="/home/eliot/Documents/Travail/M2/DEA/Tulip/ProjetM2/chromosome6_fragments_expressions.csv",
                               isMandatory=True, mustExist=True)
         self.addFileParameter("Path to Reactome Symbols csv", help="",
-                              defaultValue="/net/cremi/edarnige/espaces/travail/TulipAM2E/REACTOME.symbols.csv",
+                              defaultValue="/home/eliot/Documents/Travail/M2/DEA/Tulip/ProjetM2/REACTOME.symbols.csv",
                               isMandatory=True, mustExist=True)
         self.addFileParameter("Path to KEGG Symbols csv", help="",
-                              defaultValue="/net/cremi/edarnige/espaces/travail/TulipAM2E/KEGG.symbols.csv",
+                              defaultValue="/home/eliot/Documents/Travail/M2/DEA/Tulip/ProjetM2/KEGG.symbols.csv",
                               isMandatory=True, mustExist=True)
 
     def importGraph(self):
@@ -36,8 +35,7 @@ class InteractionNetwork(tlp.ImportModule):
         self.idToNode = {}
         self.chromosome = self.graph.getStringProperty("chromosome")
         self.expression = self.graph.getStringProperty("expression")
-        self.interactionStatus = self.graph.getStringProperty(
-            "interactionStatus")
+        self.interactionStatus = self.graph.getStringProperty("interactionStatus")
         self.distance = self.graph.getIntegerProperty('distance')
         self.viewLayout = self.graph.getLayoutProperty('viewLayout')
         self.viewColor = self.graph.getColorProperty('viewColor')
@@ -50,11 +48,11 @@ class InteractionNetwork(tlp.ImportModule):
             id1, id2 = row.ID_locus1, row.ID_locus2
             for id in (id1, id2):
                 if id not in self.idToNode:
-                    self.idToNode[id] = self.graph.addNode(
-                        {'viewLabel': id, 'chromosome': chromosome})
+                    label = "" if "chr6" in id else id
+                    self.idToNode[id] = self.graph.addNode({'viewLabel': label, 'chromosome': chromosome})
             self.graph.addEdge(self.idToNode[id1], self.idToNode[id2], {'distance': int(row.distance),
-                                                                        'interactionStatus': str(row.interaction_status),
-                                                                         'chromosome': chromosome})
+                                                                        'interactionStatus': row.interaction_status,
+                                                                        'chromosome': chromosome})
 
     def importGeneExpression(self):
         dataFrame = read_csv(self.dataSet['Path to expression csv'], sep='\t')
@@ -62,14 +60,12 @@ class InteractionNetwork(tlp.ImportModule):
             try:
                 self.expression[self.idToNode[row.IDs]] = str(row.expression)
             except KeyError:
-                node = self.graph.addNode(
-                    {'viewLabel': row.IDs, 'chromosome': row.chromosome})
+                node = self.graph.addNode({'viewLabel': row.IDs, 'chromosome': row.chromosome})
                 self.idToNode[row.IDs] = node
                 self.expression[node] = str(row.expression)
 
     def importPathways(self):
-        self.importPathwaysFromCSV(
-            self.dataSet['Path to Reactome Symbols csv'])
+        self.importPathwaysFromCSV(self.dataSet['Path to Reactome Symbols csv'])
         self.importPathwaysFromCSV(self.dataSet['Path to KEGG Symbols csv'])
 
     def importPathwaysFromCSV(self, csvPath):
@@ -79,7 +75,10 @@ class InteractionNetwork(tlp.ImportModule):
                 nodesOfPathway = []
                 for locus in loci:
                     try:
-                        nodesOfPathway.append(self.idToNode[locus])
+                        gene = self.idToNode[locus]
+                        nodesOfPathway.append(gene)
+                        for neigh in self.graph.getInOutNodes(gene):
+                            nodesOfPathway.append(neigh)
                     except KeyError:
                         node = self.graph.addNode({'viewLabel': locus})
                         self.idToNode[locus] = node
@@ -91,22 +90,20 @@ class InteractionNetwork(tlp.ImportModule):
         self.applyLayout()
         self.colorLoci()
         self.colorInteractions()
-        self.setLociSize()
+        # self.setLociSize()
 
     def applyLayout(self):
-        fm3Properties = tlp.getDefaultPluginParameters(
-            'FM^3 (OGDF)', graph=None)
+        fm3Properties = tlp.getDefaultPluginParameters('FM^3 (OGDF)', graph=None)
         fm3Properties['Edge Length Property'] = self.distance
-        self.graph.applyLayoutAlgorithm(
-            'FM^3 (OGDF)', self.viewLayout, fm3Properties)
+        self.graph.applyLayoutAlgorithm('FM^3 (OGDF)', self.viewLayout, fm3Properties)
 
     def colorLoci(self):
-        self.colorLociByExpression('intergenic', tlp.Color(204, 255, 255))
+        self.colorLociByExpression('intergenic', tlp.Color(222, 212, 195, 80))
         self.colorLociByExpression('up', tlp.Color(0, 255, 0))
         self.colorLociByExpression('down', tlp.Color(255, 0, 0))
-        self.colorLociByExpression('stable', tlp.Color(0, 0, 0))
-        self.colorLociByExpression('', tlp.Color(0, 0, 0))
-        self.colorLociByExpression('nan', tlp.Color(255, 230, 255))
+        self.colorLociByExpression('stable', tlp.Color(0, 0, 0, 80))
+        self.colorLociByExpression('', tlp.Color(0, 0, 0, 80))
+        self.colorLociByExpression('nan', tlp.Color(255, 230, 255, 80))
 
     def colorLociByExpression(self, expression, color):
         for loci in self.expression.getNodesEqualTo(expression):
@@ -114,7 +111,7 @@ class InteractionNetwork(tlp.ImportModule):
 
     def colorInteractions(self):
         self.colorInteractionsByStatus('gain', tlp.Color(0, 255, 0))
-        self.colorInteractionsByStatus('stable', tlp.Color(0, 0, 0))
+        self.colorInteractionsByStatus('stable', tlp.Color(0, 0, 0, 80))
         self.colorInteractionsByStatus('loss', tlp.Color(255, 0, 0))
 
     def colorInteractionsByStatus(self, interactionStatus, color):
@@ -125,5 +122,4 @@ class InteractionNetwork(tlp.ImportModule):
         self.viewSize.setAllNodeValue(tlp.Vec3f(1e5, 1e5, 0.5))
 
 
-tulipplugins.registerPlugin(
-    "InteractionNetwork", "Interaction Network", "AM2E", "28/01/2020", "", "1.0")
+tulipplugins.registerPlugin("InteractionNetwork", "Interaction Network", "AM2E", "28/01/2020", "", "1.0")
