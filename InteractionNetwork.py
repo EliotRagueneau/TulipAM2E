@@ -7,16 +7,16 @@ class InteractionNetwork(tlp.ImportModule):
     def __init__(self, context):
         tlp.ImportModule.__init__(self, context)
         self.addFileParameter("Path to interaction csv", help="",
-                              defaultValue="/home/eliot/Documents/Travail/M2/DEA/Tulip/ProjetM2/interactions_chromosome6.csv",
+                              defaultValue="/net/stockage/TulipDEA/interactions_chromosome6.csv",
                               isMandatory=True, mustExist=True)
         self.addFileParameter("Path to expression csv", help="",
-                              defaultValue="/home/eliot/Documents/Travail/M2/DEA/Tulip/ProjetM2/chromosome6_fragments_expressions.csv",
+                              defaultValue="/net/stockage/TulipDEA/chromosome6_fragments_expressions.csv",
                               isMandatory=True, mustExist=True)
         self.addFileParameter("Path to Reactome Symbols csv", help="",
-                              defaultValue="/home/eliot/Documents/Travail/M2/DEA/Tulip/ProjetM2/REACTOME.symbols.csv",
+                              defaultValue="/net/stockage/TulipDEA/REACTOME.symbols.csv",
                               isMandatory=True, mustExist=True)
         self.addFileParameter("Path to KEGG Symbols csv", help="",
-                              defaultValue="/home/eliot/Documents/Travail/M2/DEA/Tulip/ProjetM2/KEGG.symbols.csv",
+                              defaultValue="/net/stockage/TulipDEA/KEGG.symbols.csv",
                               isMandatory=True, mustExist=True)
                               
     def notify(self, step, max_step, message):
