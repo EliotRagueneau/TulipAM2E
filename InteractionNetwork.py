@@ -18,16 +18,20 @@ class InteractionNetwork(tlp.ImportModule):
         self.addFileParameter("Path to KEGG Symbols csv", help="",
                               defaultValue="/home/eliot/Documents/Travail/M2/DEA/Tulip/ProjetM2/KEGG.symbols.csv",
                               isMandatory=True, mustExist=True)
+                              
+    def notify(self, step, max_step, message):
+        self.pluginProgress.setComment(message)
+        self.pluginProgress.progress(step, max_step)
 
     def importGraph(self):
-        self.pluginProgress.progress(0, 4)
+        self.notify(0, 4, 'Import interaction data') 
         self.initProperties()
         self.importInteractions()
-        self.pluginProgress.progress(1, 4)
+        self.notify(1, 4, 'Import gene expression data') 
         self.importGeneExpression()
-        self.pluginProgress.progress(2, 4)
+        self.notify(2, 4, 'Import pathways data') 
         self.importPathways()
-        self.pluginProgress.progress(3, 4)
+        self.notify(3, 4, 'Style graph') 
         self.styleGraph()
         return True
 
