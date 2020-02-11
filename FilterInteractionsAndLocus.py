@@ -18,7 +18,7 @@ class FilterInteractionsAndLocus(tlp.Algorithm):
         self.notify(2, 4, "Filter empty pathways")
         self.filterPathways()
         self.notify(3, 4, "Apply layout algorithm")
-        self.applyLayout()
+        self.styleGraph()
         self.pluginProgress.progress(4, 4)
         return True
 
@@ -27,6 +27,7 @@ class FilterInteractionsAndLocus(tlp.Algorithm):
         self.interactionStatus = self.graph.getStringProperty('interactionStatus')
         self.chromosome = self.graph.getStringProperty("chromosome")
         self.viewLayout = self.graph.getLocalLayoutProperty('viewLayout')
+        self.viewSize = self.graph.getSizeProperty('viewSize')
 
     def filterLociAndInteractions(self):
         toDelete = [locus for locus in self.graph.getNodes() if not self.isLocusRelevant(locus, self.graph, False)]
@@ -64,9 +65,16 @@ class FilterInteractionsAndLocus(tlp.Algorithm):
                     return True
         return False
 
+    def styleGraph(self):
+        self.applyLayout()
+        self.setLociSize()
+
     def applyLayout(self):
         fm3Properties = tlp.getDefaultPluginParameters('FM^3 (OGDF)', graph=None)
         self.graph.applyLayoutAlgorithm('FM^3 (OGDF)', self.viewLayout, fm3Properties)
 
-tulipplugins.registerPluginOfGroup("FilterInteractionsAndLocus", "Filter interactions and locus", "Eliot Ragueneau",
+    def setLociSize(self):
+        self.viewSize.setAllNodeValue(tlp.Vec3f(1e4, 1e4, 0.5))
+
+tulipplugins.registerPluginOfGroup("FilterInteractionsAndLocus", "Filter interactions and locus", "AM2E",
                                    "29/01/2020", "", "1.0", "AM2E")

@@ -94,7 +94,7 @@ class InteractionNetwork(tlp.ImportModule):
         self.applyLayout()
         self.colorLoci()
         self.colorInteractions()
-        # self.setLociSize()
+        self.setLociSize()
 
     def applyLayout(self):
         fm3Properties = tlp.getDefaultPluginParameters('FM^3 (OGDF)', graph=None)
